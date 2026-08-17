@@ -1,0 +1,6 @@
+{
+  "name": "Plano de Aula Interativo",
+  "description": "Criador de planos de aula interativos com alinhamento BNCC, assistente Gemini e exportação em PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
