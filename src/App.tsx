@@ -24,7 +24,7 @@ export default function App() {
   // 1. CORREÇÃO CRÍTICA: Aponta para a URL oficial do SDK do Canva
   useEffect(() => {
     const script = document.createElement("script");
-    script.src = "https://canva.com";
+    script.src = "https://sdk.canva.com/designbutton/v2/api.js";
     script.async = true;
     document.body.appendChild(script);
 
