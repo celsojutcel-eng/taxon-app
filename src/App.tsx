@@ -40,10 +40,13 @@ export default function App() {
       return;
     }
 
-          try {
+    try {
       const canvaApi = await (window as any).Canva.DesignButton.initialize({
-        apiKey: "AAHOGNyGfQw"
+        apiKey: "AAHOGNyGfQw",
+        validOrigins: ["https://taxon-app-zmzn.onrender.com"]
       });
+
+
 
 
 
