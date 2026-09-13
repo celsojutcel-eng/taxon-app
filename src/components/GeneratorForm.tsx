@@ -16,6 +16,7 @@ import {
 } from "../data/bnccSuggestions";
 import { Sparkles, BookOpen, Clock, School, User, FileText, Compass, Calendar, ListFilter, Target } from "lucide-react";
 import { BloomPyramidSection } from "./BloomPyramidSection";
+import { AssessmentGeneratorSection } from "./AssessmentGeneratorSection";
 import { TaxonLogo } from "./TaxonLogo";
 
 interface GeneratorFormProps {
@@ -31,7 +32,7 @@ export const GeneratorForm: React.FC<GeneratorFormProps> = ({ onSubmit, isLoadin
     duration: "1 aula - 50 minutos",
     topic: "",
     learningObjectives: "",
-    methodology: "Aprendizagem Baseada em Projetos (PBL)",
+    methodology: "",
     bnccCompetencies: "",
     schoolName: "E.E. Pe. Sabóia de Medeiros",
     teacherName: "",
@@ -318,8 +319,9 @@ export const GeneratorForm: React.FC<GeneratorFormProps> = ({ onSubmit, isLoadin
               name="methodology"
               value={formData.methodology}
               onChange={handleChange}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition cursor-pointer"
             >
+              <option value="">-- Selecione uma metodologia (Opcional) --</option>
               {METHODOLOGY_OPTIONS.map((meth) => (
                 <option key={meth} value={meth}>
                   {meth}
@@ -864,6 +866,17 @@ export const GeneratorForm: React.FC<GeneratorFormProps> = ({ onSubmit, isLoadin
                 activeBloomLevel: nextLevel,
               }));
             }}
+          />
+        )}
+
+        {/* Gerador de 10 Itens de Avaliação da Habilidade Selecionada */}
+        {formData.bnccCompetencies && (
+          <AssessmentGeneratorSection
+            skillCode={bnccDetails[0]?.code || formData.bnccCompetencies}
+            skillText={bnccDetails[0]?.fullText || formData.bnccCompetencies}
+            subject={formData.subject}
+            gradeLevel={formData.gradeLevel}
+            activeBloomLevel={formData.activeBloomLevel}
           />
         )}
 

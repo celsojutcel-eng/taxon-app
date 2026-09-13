@@ -2,7 +2,9 @@ import React, { useState, useRef } from "react";
 import { LessonPlan, TimelineItem, BloomLevelPlan } from "../types";
 import { parseBNCCDetails } from "../data/bnccSuggestions";
 import { TaxonLogo } from "./TaxonLogo";
-import html2pdf from "html2pdf.js";
+import { AssessmentGeneratorSection } from "./AssessmentGeneratorSection";
+import html2canvas from "html2canvas-pro";
+import { jsPDF } from "jspdf";
 import {
   Download,
   Printer,
@@ -48,35 +50,94 @@ export const LessonPlanView: React.FC<LessonPlanViewProps> = ({
   const [copied, setCopied] = useState(false);
   const documentRef = useRef<HTMLDivElement>(null);
 
-  // PDF Export logic using html2pdf.js
+  // PDF Export logic using html2canvas-pro and jsPDF (native OKLCH support)
   const handleExportPdf = async () => {
     if (!documentRef.current) return;
     setIsExportingPdf(true);
 
     try {
       const element = documentRef.current;
-      const filename = `Plano_de_Aula_${plan.subject.replace(/[^a-zA-Z0-9]/g, "_")}_${
-        plan.title.replace(/[^a-zA-Z0-9]/g, "_")
-      }.pdf`;
+      const sanitizedSubject = plan.subject.replace(/[^a-zA-Z0-9]/g, "_");
+      const sanitizedTitle = plan.title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40);
+      const filename = `Plano_de_Aula_${sanitizedSubject}_${sanitizedTitle}.pdf`;
 
-      const options = {
-        margin: [10, 10, 10, 10] as [number, number, number, number], // top, left, bottom, right in mm
-        filename: filename,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          letterRendering: true,
+      // Render element to high-res canvas via html2canvas-pro
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 1200,
+        onclone: (clonedDoc) => {
+          // Hide elements marked as non-printable or buttons if any
+          const noPrints = clonedDoc.querySelectorAll(".no-print");
+          noPrints.forEach((el) => {
+            (el as HTMLElement).style.display = "none";
+          });
         },
-        jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      };
+      });
 
-      await html2pdf().set(options).from(element).save();
+      // A4 portrait dimensions in millimeters
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+      });
+
+      const pageWidthMm = 210;
+      const pageHeightMm = 297;
+      const marginMm = 10;
+      const printWidthMm = pageWidthMm - marginMm * 2; // 190 mm
+      const printHeightMm = pageHeightMm - marginMm * 2; // 277 mm
+
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+
+      // Calculate slice height in canvas pixels corresponding to one A4 printable area
+      const pageCanvasHeight = Math.floor((canvasWidth / printWidthMm) * printHeightMm);
+      const totalPages = Math.ceil(canvasHeight / pageCanvasHeight);
+
+      for (let page = 0; page < totalPages; page++) {
+        const sourceY = page * pageCanvasHeight;
+        const sourceHeight = Math.min(pageCanvasHeight, canvasHeight - sourceY);
+
+        // Render page slice onto individual canvas
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvasWidth;
+        pageCanvas.height = sourceHeight;
+        const pageCtx = pageCanvas.getContext("2d");
+
+        if (pageCtx) {
+          pageCtx.fillStyle = "#ffffff";
+          pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          pageCtx.drawImage(
+            canvas,
+            0,
+            sourceY,
+            canvasWidth,
+            sourceHeight,
+            0,
+            0,
+            canvasWidth,
+            sourceHeight
+          );
+
+          const imgData = pageCanvas.toDataURL("image/jpeg", 0.98);
+          const renderHeightMm = (sourceHeight * printWidthMm) / canvasWidth;
+
+          if (page > 0) {
+            pdf.addPage();
+          }
+
+          pdf.addImage(imgData, "JPEG", marginMm, marginMm, printWidthMm, renderHeightMm);
+        }
+      }
+
+      pdf.save(filename);
     } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
-      alert("Falha ao exportar PDF. Você também pode utilizar a opção de Imprimir / Salvar em PDF do navegador.");
+      console.error("Erro ao exportar PDF:", error);
+      alert("Falha ao exportar PDF automaticamente. Você também pode utilizar a opção Imprimir / Salvar como PDF do navegador.");
     } finally {
       setIsExportingPdf(false);
     }
@@ -671,6 +732,19 @@ ${plan.inclusivityAdaptations}
               Estratégias de Acessibilidade & Inclusão
             </h3>
             <p className="text-xs text-amber-950 leading-relaxed">{plan.inclusivityAdaptations}</p>
+          </div>
+        )}
+
+        {/* Gerador de 10 Itens de Avaliação da Habilidade Selecionada */}
+        {plan.bnccSkills && plan.bnccSkills.length > 0 && (
+          <div className="mb-8 page-break-inside-avoid">
+            <AssessmentGeneratorSection
+              skillCode={plan.bnccSkills[0]?.code || ""}
+              skillText={plan.bnccSkills[0]?.description || ""}
+              subject={plan.subject}
+              gradeLevel={plan.gradeLevel}
+              activeBloomLevel={plan.currentBloomLevel}
+            />
           </div>
         )}
 

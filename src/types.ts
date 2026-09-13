@@ -79,3 +79,99 @@ export interface GeneratorFormData {
   activeBloomLevel?: number;
   bloomLevelPlans?: Record<number, BloomLevelPlan>;
 }
+
+export interface VisualResourceData {
+  tipo: "obra_arte" | "charge_hq" | "mapa" | "grafico" | "tabela" | "fotografia" | "esquema_geometrico" | "nenhum";
+  titulo: string;
+  autor_ou_fonte: string;
+  descricao_visual: string;
+  imagem_url?: string;
+  tabela_markdown?: string;
+  aspect_ratio?: "1:1" | "4:3" | "16:9" | "3:4";
+}
+
+export interface AssessmentItemData {
+  numero_item?: number;
+  suporte_dados?: {
+    requer_ilustracao?: boolean;
+    prompt_para_imagem?: string;
+  };
+  texto_base: string;
+  enunciado: string;
+  alternativas: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+    E?: string;
+    [key: string]: string | undefined;
+  };
+  gabarito: "A" | "B" | "C" | "D" | "E" | string;
+  justificativa_gabarito: string;
+  justificativa_distratores?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
+    E?: string;
+    [key: string]: string | undefined;
+  };
+  nivel_bloom?: string;
+  dificuldade?: "Fácil" | "Médio" | "Difícil" | string;
+  adaptada_educacao_especial?: boolean;
+  recurso_acessibilidade?: string;
+  recurso_visual?: VisualResourceData;
+}
+
+export interface AssessmentApiRequest {
+  codigoSeduc: string;
+  nivelBloom?: string;
+  etapa?: string;
+  componente?: string;
+  subject?: string;
+  textoHabilidade?: string;
+  skillText?: string;
+  gradeLevel?: string;
+  tema?: string;
+  topic?: string;
+  dificuldade?: string;
+  educacaoEspecial?: boolean;
+  quantidade?: number;
+  incluirSuporteVisual?: boolean;
+}
+
+export interface AssessmentApiResponse {
+  habilidade?: string;
+  componente?: string;
+  etapa?: string;
+  total_itens?: number;
+  questoes?: AssessmentItemData[];
+  itens?: AssessmentItemData[];
+  metadados?: {
+    habilidade_seduc: string;
+    nivel_bloom?: string;
+    etapa: string;
+    componente?: string;
+    dificuldade_solicitada?: string;
+    educacao_especial?: boolean;
+    suporte_visual_solicitado?: string;
+    total_itens: number;
+  };
+  error?: string;
+  message?: string;
+}
+
+export interface AssessmentResponse {
+  metadados?: {
+    habilidade_seduc: string;
+    nivel_bloom?: string;
+    etapa: string;
+    componente?: string;
+    dificuldade_solicitada?: string;
+    educacao_especial?: boolean;
+    suporte_visual_solicitado?: string;
+    total_itens: number;
+  };
+  itens?: AssessmentItemData[];
+  questoes?: AssessmentItemData[];
+}

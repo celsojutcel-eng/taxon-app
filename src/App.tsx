@@ -21,6 +21,59 @@ export default function App() {
   const [isClassroomModeOpen, setIsClassroomModeOpen] = useState<boolean>(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState<boolean>(false);
 
+  // 1. CORREÇÃO CRÍTICA: Aponta para a URL oficial do SDK do Canva
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://canva.com";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  // 2. FUNÇÃO QUE ABRE O EDITOR DO CANVA ATUALIZADA PARA O PADRÃO V2 SDK
+  const handleOpenCanva = async () => {
+    if (!(window as any).Canva || !(window as any).Canva.DesignButton) {
+      alert("A ferramenta do Canva ainda está carregando. Aguarde 2 segundos!");
+      return;
+    }
+
+    try {
+      const canvaApi = await (window as any).Canva.DesignButton.initialize({
+        apiKey: "AAHOGEjiy2K",
+      });
+
+      canvaApi.createDesign({
+        design: {
+          type: "Presentation", 
+        },
+        onDesignPublish: (opts: any) => {
+          const imagemDoCanvaUrl = opts.exportUrl;
+
+          if (currentPlan) {
+            const planoAtualizado: LessonPlan = {
+              ...currentPlan,
+              suporte_dados: {
+                requer_ilustracao: true,
+                prompt_para_imagem: "Criado de forma personalizada via Canva",
+                url: imagemDoCanvaUrl,
+                imageUrl: imagemDoCanvaUrl,
+              } as any
+            };
+
+            handleUpdateCurrentPlan(planoAtualizado);
+            alert("Sucesso! O seu design do Canva foi embutido no seu plano de aula!");
+          }
+        },
+      });
+    } catch (error) {
+      console.error("Erro na integração:", error);
+      alert("Não foi possível carregar a janela do Canva.");
+    }
+  };
+
   // Load saved plans from localStorage on mount
   useEffect(() => {
     try {
@@ -56,15 +109,26 @@ export default function App() {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        const text = await response.text();
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("O servidor retornou uma resposta temporariamente inacessível. Por favor, tente novamente em instantes.");
+      }
+
       if (!response.ok) {
-        throw new Error(data.error || "Falha ao comunicar com o servidor Gemini.");
+        const rawErr = data.error || data.message || "Falha ao comunicar com o servidor Gemini.";
+        let cleanErr = typeof rawErr === "string" ? rawErr : JSON.stringify(rawErr);
+        if (cleanErr.includes("503") || cleanErr.includes("high demand") || cleanErr.includes("UNAVAILABLE")) {
+          cleanErr = "Os servidores de Inteligência Artificial estão com alta demanda temporária. Por favor, aguarde alguns instantes e tente novamente.";
+        }
+        throw new Error(cleanErr);
       }
 
       const newPlan: LessonPlan = data;
       setCurrentPlan(newPlan);
 
-      // Auto-save to saved plans library
       const updatedList = [newPlan, ...savedPlans.filter((p) => p.id !== newPlan.id)];
       savePlansToStorage(updatedList);
     } catch (err: any) {
@@ -93,7 +157,6 @@ export default function App() {
 
   const handleImportPlans = (importedPlans: LessonPlan[]) => {
     const merged = [...importedPlans, ...savedPlans];
-    // Remove duplicates by id
     const unique = Array.from(new Map(merged.map((item) => [item.id, item])).values());
     savePlansToStorage(unique);
   };
@@ -123,6 +186,19 @@ export default function App() {
           </div>
         )}
 
+        {/* Botão de personalização do Canva */}
+        {currentPlan && (
+          <div className="max-w-4xl mx-auto mb-4 flex justify-end">
+            <button
+              onClick={handleOpenCanva}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium rounded-xl shadow-md transition-all active:scale-95 text-sm"
+            >
+              <Sparkles className="w-4 h-4 text-purple-200 animate-pulse" />
+              <span>Personalizar com IA do Canva (Premium Edu)</span>
+            </button>
+          </div>
+        )}
+
         {/* View Switcher: Form or Active Lesson Plan */}
         {!currentPlan ? (
           <GeneratorForm onSubmit={handleGeneratePlan} isLoading={isLoading} />
@@ -145,7 +221,7 @@ export default function App() {
             <span className="font-semibold text-slate-400">Plano de Aula Interativo</span>
             <span>• Alinhado à BNCC</span>
           </div>
-          <div>Desenvolvido com IA Gemini & Exportação Automática em PDF</div>
+          <div>Desenvolvido com IA Gemini & Integração Oficial Canva SDK</div>
         </div>
       </footer>
 

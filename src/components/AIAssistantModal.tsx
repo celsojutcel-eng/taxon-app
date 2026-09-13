@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { LessonPlan } from "../types";
-import { Sparkles, HelpCircle, HeartHandshake, Wrench, FilePlus, X, Copy, Check, Send } from "lucide-react";
+import { Sparkles, HelpCircle, HeartHandshake, Wrench, FilePlus, X, Copy, Check, Send, AlertTriangle } from "lucide-react";
 
 interface AIAssistantModalProps {
   plan: LessonPlan;
@@ -19,6 +19,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
   const [customPrompt, setCustomPrompt] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resultText, setResultText] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
   if (!isOpen) return null;
@@ -26,6 +27,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
   const handleRunAI = async (actionType: string, promptDetails?: string) => {
     setIsLoading(true);
     setResultText("");
+    setErrorMessage(null);
     try {
       const response = await fetch("/api/refine-section", {
         method: "POST",
@@ -37,13 +39,25 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
         }),
       });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        const text = await response.text();
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("O servidor retornou uma resposta temporariamente inacessível. Por favor, tente novamente.");
+      }
+
       if (!response.ok) {
-        throw new Error(data.error || "Erro ao consultar a IA.");
+        const rawMsg = data.error || data.message || "Erro ao consultar a IA.";
+        let cleanMsg = typeof rawMsg === "string" ? rawMsg : JSON.stringify(rawMsg);
+        if (cleanMsg.includes("503") || cleanMsg.includes("high demand") || cleanMsg.includes("UNAVAILABLE")) {
+          cleanMsg = "Os servidores de IA estão com alta demanda temporária. Por favor, aguarde alguns instantes e tente novamente.";
+        }
+        throw new Error(cleanMsg);
       }
       setResultText(data.resultText || "Nenhum resultado gerado.");
     } catch (err: any) {
-      alert("Erro: " + err.message);
+      setErrorMessage(err.message || "Erro ao processar solicitação.");
     } finally {
       setIsLoading(false);
     }
@@ -162,6 +176,23 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
                   <span>Gerar</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="p-3.5 rounded-xl bg-rose-950/80 border border-rose-800/80 text-rose-200 text-xs flex items-center justify-between shadow-lg">
+              <div className="flex items-center space-x-2.5">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span className="font-medium">{errorMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="px-2 py-0.5 rounded bg-rose-900/60 hover:bg-rose-800 text-rose-300 text-xs font-bold transition ml-2 shrink-0"
+              >
+                Fechar
+              </button>
             </div>
           )}
 
