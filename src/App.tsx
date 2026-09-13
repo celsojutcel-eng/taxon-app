@@ -42,7 +42,7 @@ export default function App() {
 
           try {
       const canvaApi = await (window as any).Canva.DesignButton.initialize({
-        apiKey: "AAHOGNE7ejg"
+        apiKey: "AAHOGNyGfQw"
       });
 
 
